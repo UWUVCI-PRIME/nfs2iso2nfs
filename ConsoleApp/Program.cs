@@ -10,38 +10,51 @@ namespace ConsoleApp
         public static Nfs Nfs = new();
         public static bool enc = false;
         public static bool keepFiles = false;
-        public static string keyFile = ".." + Path.DirectorySeparatorChar + "code" + Path.DirectorySeparatorChar + "htk.bin";
-        public static string IsoFile = "game.iso";
+        public static string MainPath = "C:\\Users\\jfiop\\AppData\\Local\\Programs\\UWUVCI AIO\\bin\\BaseGames\\Rhythm Heaven Fever [US]";
+        public static string keyFile = MainPath + Path.DirectorySeparatorChar + "code" + Path.DirectorySeparatorChar + "htk.bin";
+        public static string IsoFile = "C:\\Users\\jfiop\\Downloads\\Wii_ISO\\game.iso";
         public static string wiiKeyFile = "wii_common_key.bin";
-
+        public static string temp = "E:\\#####v4\\UWUVCIv4PrePreAlpha\\UWUVCIv4PrePreAlpha\\bin\\Debug\\net7.0\\UWUVCI_AppData\\TEMP\\NFS";
         public static void Main(string[] args)
         {
             Nfs = new Nfs();
-            Patch = new Patch(".." + Path.DirectorySeparatorChar + "code" + Path.DirectorySeparatorChar + "fw.img");
-            if (!CheckArgs(args))
-                return;
+            Nfs.SetDir(MainPath + Path.DirectorySeparatorChar + "content");
+            Nfs.SetTemp(temp);
+            Nfs.SetOut(MainPath + Path.DirectorySeparatorChar + "content" + Path.DirectorySeparatorChar);
+            Patch = new Patch(MainPath + Path.DirectorySeparatorChar + "code" + Path.DirectorySeparatorChar + "fw.img");
+            Nfs.Key = Nfs.CommonKey;
+            Nfs.Encrypt(Patch, IsoFile);
+            Nfs.DeleteFiles();
 
-            SetupFiles();
+            //Nfs = new Nfs();
+            //Nfs.SetDir(MainPath + Path.DirectorySeparatorChar + "content");
+            //Nfs.SetTemp(temp);
+            //Nfs.SetOut(MainPath + Path.DirectorySeparatorChar + "content" + Path.DirectorySeparatorChar);
+            //Patch = new Patch(MainPath + Path.DirectorySeparatorChar + "code" + Path.DirectorySeparatorChar + "fw.img");
+            //if (!CheckArgs(args))
+            //    return;
 
-            if (!ArgValidation())
-                return;
+            //SetupFiles();
+            //enc = true;
+            //if (!ArgValidation())
+            //    return;
 
-            Nfs.Key = GetKey();
-            if (Nfs?.Key == null)
-                return;
+            //Nfs.Key = GetKey();
+            //if (Nfs?.Key == null)
+            //    return;
 
-            if (enc)
-                Encrypt();
-            else
-                Decrypt();
+            //if (enc)
+            //    Encrypt();
+            //else
+            //    Decrypt();
 
-            if (!keepFiles)
-            {
-                Console.WriteLine("Deleting files!");
-                Nfs.DeleteFiles();
-                Console.WriteLine("Deleted!");
-                Console.WriteLine();
-            }
+            //if (!keepFiles)
+            //{
+            //    Console.WriteLine("Deleting files!");
+            //    Nfs.DeleteFiles();
+            //    Console.WriteLine("Deleted!");
+            //    Console.WriteLine();
+            //}
         }
         private static void Decrypt()
         {
@@ -89,7 +102,7 @@ namespace ConsoleApp
             Console.WriteLine();
 
             Console.WriteLine("Split NFS File");
-            Nfs.SplitFile();
+            _ = Nfs.SplitFile().Result;
             Console.WriteLine("Splitted!");
             Console.WriteLine();
         }
@@ -203,8 +216,8 @@ namespace ConsoleApp
                 keyFile = dir + Path.DirectorySeparatorChar + keyFile;
             if (!Path.IsPathRooted(IsoFile))
                 IsoFile = dir + Path.DirectorySeparatorChar + IsoFile;
-            if (!Path.IsPathRooted(wiiKeyFile))
-                wiiKeyFile = dir + Path.DirectorySeparatorChar + wiiKeyFile;
+            //if (!Path.IsPathRooted(wiiKeyFile))
+               // wiiKeyFile = dir + Path.DirectorySeparatorChar + wiiKeyFile;
             if (!Path.IsPathRooted(Nfs.Dir))
                 Nfs.Dir = dir + Path.DirectorySeparatorChar + Nfs.Dir;
             if (!Path.IsPathRooted(Patch.FwFile))
@@ -284,7 +297,7 @@ namespace ConsoleApp
 #pragma warning disable CS8603 // Possible null reference return.
         private static byte[] GetKey()
         {
-            Console.WriteLine("Searching for AES key file...");
+            Console.WriteLine("Determining AES key...");
             if (!File.Exists(keyFile))
             {
                 Console.WriteLine("ERROR: Could not find AES key file! Exiting...");
@@ -296,7 +309,7 @@ namespace ConsoleApp
                 Console.WriteLine("ERROR: AES key file has wrong file size! Exiting...");
                 return null;
             }
-            Console.WriteLine("AES key file found!");
+            //Console.WriteLine("AES key file found!");
 
             if (Nfs.CommonKey[0] != 0xeb)
             {
@@ -324,7 +337,7 @@ namespace ConsoleApp
                 }
             }
             else
-                Console.WriteLine("Wii common key found in source code!");
+                Console.WriteLine("AES key determined");
 
             Console.WriteLine();
             return key;

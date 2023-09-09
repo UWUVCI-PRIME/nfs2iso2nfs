@@ -9,6 +9,7 @@ namespace nfs2iso2nfs.Models
 {
     public class Nfs
     {
+        public string temp = "";
         public string Hif = "hif.nfs";
         public string HifDec = "hif_dec.nfs";
         public string HifUnpack = "hif_unpack.nfs";
@@ -16,8 +17,10 @@ namespace nfs2iso2nfs.Models
         public int HeaderSize = 0x200;
         public int SectorSize = 0x8000;
         public int Size = 0xFA00000;
+
+        public byte[] CommonKey { get; set; } = { 0xeb, 0xe4, 0x2a, 0x22, 0x5e, 0x85, 0x93, 0xe4, 0x48, 0xd9, 0xc5, 0x45, 0x73, 0x81, 0xaa, 0xf7 };
         public byte[] Key { get; set; } = Array.Empty<byte>();
-        public byte[] CommonKey { get; set; } = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+        
         public string NfsOutputDirectory { get; set; } = Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar;
         public void CombineNFSFiles()
         {
@@ -38,12 +41,66 @@ namespace nfs2iso2nfs.Models
                     nfs.Write(nfsTemp.ReadBytes((int)nfsTemp.BaseStream.Length));
             }
         }
+        public void Decrypt(string IsoFile)
+        {
+            var header = ByteHelper.GetHeader(Dir + Path.DirectorySeparatorChar + "hif_000000.nfs");
+            Console.WriteLine("Combining NFS Files");
+            CombineNFSFiles();
+            Console.WriteLine("Combined");
+            Console.WriteLine();
+
+            Console.WriteLine("Decrypting hif.nfs...");
+            NfsHelper.DecryptNFS(Hif, HifDec, Key, SectorSize);
+            Console.WriteLine("Decrypted!");
+            Console.WriteLine();
+
+            Console.WriteLine("Unpacking nfs");
+            Unpack(header);
+            Console.WriteLine("Unpacked");
+            Console.WriteLine();
+
+            Console.WriteLine("Manipulate Iso - Decrypt");
+            NfsHelper.DecryptManipulateIso(HifUnpack, IsoFile, SectorSize, CommonKey);
+            Console.WriteLine("Felt up Iso");
+            Console.WriteLine();
+        }
+        public void Encrypt(Patch patch, string IsoFile)
+        {
+            Console.WriteLine("Do Patching if applicable!");
+            patch.DoThePatching();
+            Console.WriteLine("Patching Done!");
+            Console.WriteLine();
+
+            Console.WriteLine("Manipulate Iso - Encrypt");
+            var size = NfsHelper.EncryptManipulateIso(IsoFile, HifUnpack, SectorSize, CommonKey);
+            Console.WriteLine("Felt up Iso");
+            Console.WriteLine();
+
+            Console.WriteLine("Packing nfs");
+            var header = PackNFS(size);
+            Console.WriteLine("Packing complete!");
+            Console.WriteLine();
+
+            Console.WriteLine("EncryptNFS");
+            NfsHelper.EncryptNFS(HifDec, Hif, Key, SectorSize, header);
+            Console.WriteLine("Encrypted!");
+            Console.WriteLine();
+
+            Console.WriteLine("Split NFS File");
+            _ = SplitFile().Result;
+            Console.WriteLine("Splitted!");
+            Console.WriteLine();
+        }
         public void DeleteFiles()
         {
             foreach (var file in new List<string>() { Hif, HifDec, HifUnpack })
                 File.Delete(file);
+            Directory.Delete(temp, true);
         }
-
+        public void SetDir(string dir)
+        {
+            Dir = dir;
+        }
         public void Unpack(byte[] header)
         {
             using var er = new BinaryReader(File.OpenRead(HifDec));
@@ -167,7 +224,7 @@ namespace nfs2iso2nfs.Models
             }
             return header;
         }
-        public void SplitFile()
+        public async Task<bool> SplitFile()
         {
             using var nfs = new BinaryReader(File.OpenRead(Hif));
             long size = nfs.BaseStream.Length;
@@ -176,11 +233,28 @@ namespace nfs2iso2nfs.Models
             do
             {
                 Console.WriteLine("Building hif_" + string.Format("{0:D6}", i) + ".nfs...");
-                var nfsTemp = new BinaryWriter(File.OpenWrite(NfsOutputDirectory + "hif_" + string.Format("{0:D6}", i) + ".nfs"));
-                nfsTemp.Write(nfs.ReadBytes(size > Size ? Size : (int)size));
+                //var nfsTemp = new BinaryWriter(File.OpenWrite());
+                File.WriteAllBytes(NfsOutputDirectory + "hif_" + string.Format("{0:D6}", i) + ".nfs", nfs.ReadBytes(size > Size ? Size : (int)size));
+                //nfsTemp.Write();
                 size -= Size;
                 i++;
             } while (size > 0);
+            return true;
+        }
+
+        public void SetTemp(string temp)
+        {
+            if(Directory.Exists(temp)) Directory.Delete(temp, true);
+            this.temp = temp;
+            Directory.CreateDirectory(temp);
+            Hif = Path.Combine(temp, Hif);
+            HifDec = Path.Combine(temp, HifDec);
+            HifUnpack = Path.Combine(temp, HifUnpack);
+        }
+
+        public void SetOut(string outpath)
+        {
+            NfsOutputDirectory = outpath;
         }
     }
 }

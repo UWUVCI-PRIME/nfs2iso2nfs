@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "nfs2iso2nfs": {
+      "commandName": "Project",
+      "commandLineArgs": "-enc"
+    }
+  }
+}

@@ -324,7 +324,7 @@ namespace nfs2iso2nfs
                 }
             }
             else
-                Console.WriteLine("Wii common key found in source code!");
+                //Console.WriteLine("Wii common key found in source code!");
 
             Console.WriteLine();
             return key;
